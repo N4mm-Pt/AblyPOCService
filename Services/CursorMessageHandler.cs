@@ -8,6 +8,7 @@ public class CursorMessageHandler(AblyRest ably) : IMessageHandler
 {
     public async Task HandleAsync(MessageWrapperModel wrapper)
     {
+        return;
         var cursor = wrapper.Content.Deserialize<CursorMessage>();
 
         var payload = new

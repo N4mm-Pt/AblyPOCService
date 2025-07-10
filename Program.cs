@@ -12,6 +12,15 @@ builder.Services.AddControllers();
 builder.Services.AddTransient<ChatMessageHandler>();
 builder.Services.AddTransient<CursorMessageHandler>();
 builder.Services.AddSingleton(new AblyRest(builder.Configuration["Ably:ApiKey"]));
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy => policy
+            .WithOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "http://localhost:4173")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
+});
 
 var app = builder.Build();
 
@@ -22,7 +31,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
+
+// Remove HTTPS redirection in development to allow HTTP connections
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseWebSockets();
 
 app.MapControllers();
