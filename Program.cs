@@ -10,7 +10,6 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 // builder.Services.AddSingleton<MessageRouterService>();
 builder.Services.AddTransient<ChatMessageHandler>();
-builder.Services.AddTransient<CursorMessageHandler>();
 builder.Services.AddSingleton(new AblyRest(builder.Configuration["Ably:ApiKey"]));
 builder.Services.AddCors(options =>
 {

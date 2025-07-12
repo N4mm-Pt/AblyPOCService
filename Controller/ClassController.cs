@@ -1,15 +1,12 @@
 using AblyPOCService.Services;
 using AblyPOCService.Models;
 using Microsoft.AspNetCore.Mvc;
-using System.Net.WebSockets;
-using System.Text;
-using System.Text.Json;
 
 namespace AblyPOCService.Controller;
 
 [ApiController]
 [Route("api/class")]
-public class ClassController(ChatMessageHandler chatHandler, CursorMessageHandler cursorHandler) : ControllerBase
+public class ClassController(ChatMessageHandler chatHandler) : ControllerBase
 {
     [HttpPost("chat")]
     public async Task<IActionResult> PostChat([FromBody] MessageWrapperModel msg)
@@ -25,41 +22,38 @@ public class ClassController(ChatMessageHandler chatHandler, CursorMessageHandle
         }
     }
 
-    [HttpGet("cursor-stream")]
-    public async Task<IActionResult> CursorStream([FromQuery] string classId, [FromQuery] string userId)
+    [HttpPost("toggle-cursor")]
+    public async Task<IActionResult> ToggleCursor([FromBody] ToggleCursorRequest request)
     {
-        if (!HttpContext.WebSockets.IsWebSocketRequest)
+        try
         {
-            return BadRequest("WebSocket connection expected.");
-        }
+            // Create a message to notify all students about cursor stream toggle
+            var toggleMessage = new MessageWrapperModel
+            {
+                ClassId = request.ClassId,
+                From = request.TeacherId,
+                To = "all",
+                Type = "cursor-toggle",
+                Content = System.Text.Json.JsonSerializer.SerializeToElement(new {
+                    enabled = request.Enabled,
+                    teacherId = request.TeacherId,
+                    teacherName = request.TeacherName,
+                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                })
+            };
 
-        using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-        var buffer = new byte[1024 * 4];
-        while (webSocket.State == WebSocketState.Open)
+            // Use chat handler to send the toggle notification via Ably
+            await chatHandler.HandleAsync(toggleMessage);
+            
+            return Ok(new { 
+                message = request.Enabled ? "Cursor stream enabled" : "Cursor stream disabled", 
+                enabled = request.Enabled 
+            });
+        }
+        catch (Exception ex)
         {
-            var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-            if (result.MessageType == WebSocketMessageType.Close)
-            {
-                await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed by client", CancellationToken.None);
-                break;
-            }
-
-            if (result.MessageType == WebSocketMessageType.Text)
-            {
-                var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                var cursorContent = JsonDocument.Parse(json).RootElement;
-                var msg = new MessageWrapperModel
-                {
-                    ClassId = classId,
-                    From = userId,
-                    To = "all",
-                    Type = "cursor",
-                    Content = cursorContent
-                };
-                await cursorHandler.HandleAsync(msg);
-            }
+            return BadRequest(new { error = ex.Message });
         }
-        return new EmptyResult();
     }
 
     [HttpPost("join")]
