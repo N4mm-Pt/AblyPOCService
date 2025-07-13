@@ -115,4 +115,41 @@ public class ClassController(ChatMessageHandler chatHandler) : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
+
+    [HttpPost("private-chat")]
+    public async Task<IActionResult> RequestPrivateChat([FromBody] PrivateChatRequest request)
+    {
+        try
+        {
+            // Create private chat notification message
+            var privateChatMessage = new MessageWrapperModel
+            {
+                ClassId = request.ClassId,
+                From = request.TeacherId,
+                To = request.StudentId,
+                Type = "private-chat-request",
+                Content = System.Text.Json.JsonSerializer.SerializeToElement(new {
+                    teacherId = request.TeacherId,
+                    teacherName = request.TeacherName,
+                    studentId = request.StudentId,
+                    studentName = request.StudentName,
+                    channelId = $"{request.TeacherId}_{request.StudentId}",
+                    message = $"Teacher {request.TeacherName} wants to start a private chat",
+                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                })
+            };
+
+            // Send notification via Ably to the specific student
+            await chatHandler.HandleAsync(privateChatMessage);
+            
+            return Ok(new { 
+                message = "Private chat request sent successfully", 
+                channelId = $"{request.TeacherId}_{request.StudentId}" 
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 }
