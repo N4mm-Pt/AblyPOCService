@@ -1,3 +1,4 @@
+using AblyPOCService.Models;
 using AblyPOCService.Services;
 using IO.Ably;
 
@@ -10,6 +11,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 // builder.Services.AddSingleton<MessageRouterService>();
 builder.Services.AddTransient<ChatMessageHandler>();
+builder.Services.Configure<AblyKey>(builder.Configuration.GetSection("Ably"));
 builder.Services.AddSingleton(new AblyRest(builder.Configuration["Ably:ApiKey"]));
 builder.Services.AddCors(options =>
 {
