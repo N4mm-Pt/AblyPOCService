@@ -17,14 +17,13 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
         policy => policy
-            .WithOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "http://localhost:4173")
+            .WithOrigins("http://localhost:5173", "http://localhost:5174", "drphorkscafls.cloudfront.net")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials());
 });
 
 var app = builder.Build();
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
